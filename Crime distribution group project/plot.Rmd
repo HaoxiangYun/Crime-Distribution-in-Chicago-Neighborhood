@@ -1,0 +1,113 @@
+---
+title: "project"
+author: "jchung68"
+date: "July 28, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#install.packages("knitr")
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#The data sets must be loaded into R before use
+noise <- read.csv("/cloud/project/Noise_Complaints_in_Chicago.csv")
+
+crime <- read.csv("/cloud/project/Crimes_-_2017.csv")
+
+health <- read.csv("/cloud/project/Public_Health_Statistics-_Selected_public_health_indicators_by_Chicago_community_area.csv")
+```
+
+
+```{r}
+#install.packages("rvest")
+#install.packages("dplyr")
+library("dplyr")
+
+crime_and_health = inner_join(crime, health, by = "Community.Area")
+install.packages("ggplot2")
+library("ggplot2")
+#install.packages("wordcloud")
+library("wordcloud") 
+
+ncrimes = count(crime_and_health, crime_and_health$Community.Area)
+names(ncrimes) = c("Community.Area","Number_of_Crimes")
+ncrimes_health = inner_join(health,ncrimes, by = "Community.Area")
+
+  ggplot(ncrimes_health)+
+  geom_point(aes(`Number_of_Crimes`,y=`Per.Capita.Income`)) #+ #geom_text(aes(x=ncrimes_health$Number_of_Crimes,y=ncrimes_health$Per.Capita.Income,label=ncrimes_health$Community.Area.Name))
+
+  
+ggplot(ncrimes_health)+
+  geom_point(aes(`Number_of_Crimes`,y=`Infant.Mortality.Rate`))+
+  geom_text(aes(x=`Number_of_Crimes`,y=`Birth.Rate`,label= Community.Area),hjust=-.2, vjust=0)
+```
+
+
+```{r}
+plot_versus_crime = function(yvar,lowcom=1,highcom=77){
+  library("ggplot2")
+  a = ncrimes_health[lowcom:highcom,]
+  if(yvar =="Birth.Rate"){
+    y = a$Birth.Rate
+  }else if(yvar == "Per.Capita.Income"){
+    y = a$Per.Capita.Income
+  }else if(yvar == "Infant.Mortality.Rate"){
+    y = a$Infant.Mortality.Rate
+  }else {
+    y = a$Unemployment
+  }
+    
+  ggplot(a)+
+  geom_point(aes(x= `Number_of_Crimes`,y=y))+
+  geom_text(aes(x=`Number_of_Crimes`,y=y,label= Community.Area),hjust=-.2, vjust=0)
+    
+}
+
+
+```
+
+
+```{r}
+linear_reg = function(yvar,lowcom,highcom){
+  library("ggplot2")
+   a = ncrimes_health[lowcom:highcom,]
+  if(yvar =="Birth.Rate"){
+    y = a$Birth.Rate
+  }else if(yvar == "Per.Capita.Income"){
+    y = a$Per.Capita.Income
+  }else if(yvar == "Infant.Mortality.Rate"){
+    y = a$Infant.Mortality.Rate
+  }else {
+    y = a$Unemployment
+  } 
+  
+  a = lm(a$Number_of_Crimes~`y`)
+  x = plot(a)
+  x
+}
+
+```
+
+
+
+```{r}
+wordcloud(words = ncrimes_health$Community.Area.Name,freq = ncrimes_health$Number_of_Crimes,random.order = FALSE, scale = c(2,.1), random.color = TRUE, colors = c(colors()))
+```
+
+
+
+
+```{r}
+about_text = "This app will introduce and let you explore how crime and various socio-economic variables are related.  The first tab has an interactive plot allowing you to choose which community areas of Chicago you'd like to explore and which variable you'd like to plot against crime.  The second tab is a picture allowing you to see the names of the corresponding Chicago areas you're exploring.  The third tab has a word cloud showing the areas of Chicago with the most reported crimes (Note: the crime count is not per capita and may be confounded by community size). The 'Summary' tab shows a summary of all the data we had access to.  Finally, the last tab shows a residual plot showing the trend in the data you selected.  Enjoy!"
+```
+
+
+
+```{r}
+summary = summary(ncrimes_health)
+summary
+```
+
